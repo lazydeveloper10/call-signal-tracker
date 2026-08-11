@@ -1,12 +1,13 @@
 """
 * CALL & SIGNAL TRACKER (Python) *
 Author: h4cker_fawad
-Version: 1.1
+Version: 1.2
 Description: Analyze your own call logs & mobile network signals.
 """
 
 import os
 import sys
+import argparse
 import pandas as pd
 from datetime import datetime
 
@@ -27,7 +28,7 @@ DATA_FILE = os.path.join(DATA_DIR, 'call_data.csv')
 
 # Program info
 APP_NAME = "CALL & SIGNAL TRACKER"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 AUTHOR = "h4cker_fawad"
 DESCRIPTION = "Analyze your own call logs & mobile network signals."
 
@@ -45,7 +46,7 @@ def show_menu():
     print("2. View Call Logs")
     print("3. View All / Search Records")
     print("4. Analyze Signal Strength & Network Data")
-    print("5. Export Report (CSV)")
+    print("5. Export Report (CSV / JSON)")
     print("6. Exit")
     print("-" * 60)
 
@@ -266,6 +267,47 @@ def analyze_signal_strength(df):
     print("==============================================")
     return valid_df
 
+def plot_signal_distribution(df):
+    """Render a visual ASCII horizontal bar chart of signal quality distribution."""
+    if df.empty or 'rsrp' not in df.columns:
+        return
+        
+    valid_df = df.copy()
+    valid_df['rsrp'] = pd.to_numeric(valid_df['rsrp'], errors='coerce')
+    valid_df = valid_df.dropna(subset=['rsrp'])
+    
+    if valid_df.empty:
+        return
+        
+    categories = {
+        "Excellent (>= -70 dBm)": 0,
+        "Good (-70 to -90 dBm)": 0,
+        "Fair (-90 to -110 dBm)": 0,
+        "Poor (-110 to -120 dBm)": 0,
+        "Very Poor (<= -120 dBm)": 0
+    }
+    
+    for val in valid_df['rsrp']:
+        if val >= -70:
+            categories["Excellent (>= -70 dBm)"] += 1
+        elif val >= -90:
+            categories["Good (-70 to -90 dBm)"] += 1
+        elif val >= -110:
+            categories["Fair (-90 to -110 dBm)"] += 1
+        elif val >= -120:
+            categories["Poor (-110 to -120 dBm)"] += 1
+        else:
+            categories["Very Poor (<= -120 dBm)"] += 1
+            
+    total = len(valid_df)
+    print("\n========== SIGNAL DISTRIBUTION CHART ==========")
+    for cat, count in categories.items():
+        pct = (count / total) * 100 if total > 0 else 0
+        bar_len = int(pct / 5)  # 20 blocks max
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+        print(f"{cat:<25} [{bar}] {pct:>5.1f}% ({count})")
+    print("===============================================")
+
 def analyze_network_types(df):
     """Display count distribution of network radio types."""
     if df.empty:
@@ -328,14 +370,20 @@ def identify_dead_zones(df, threshold=-110):
 
 # --------- 5. EXPORT REPORT & MAIN PROGRAM LOOP ---------
 def export_report(df, filename='report.csv'):
-    """Export dataset to a CSV file in the reports directory."""
+    """Export dataset to a CSV or JSON file in the reports directory."""
     if df.empty:
         print("[!] No data to export.")
         return
     try:
         if not os.path.isabs(filename) and not filename.startswith(REPORTS_DIR):
             filename = os.path.join(REPORTS_DIR, filename)
-        df.to_csv(filename, index=False)
+        
+        ext = os.path.splitext(filename)[1].lower()
+        if ext == '.json':
+            df.to_json(filename, orient='records', indent=2)
+        else:
+            df.to_csv(filename, index=False)
+            
         print(f"[+] Report exported successfully: {filename}")
     except Exception as e:
         print(f"[!] Error exporting report: {e}")
@@ -378,12 +426,33 @@ def pause():
     input("\nPress Enter to return to main menu...")
 
 def main():
-    """Main program execution loop."""
+    """Main program execution loop with CLI argument support."""
+    parser = argparse.ArgumentParser(description="Call & Signal Tracker CLI Utility")
+    parser.add_argument("-f", "--file", help="Path to input CSV or JSON call data file")
+    parser.add_argument("-a", "--analyze", action="store_true", help="Run full signal analysis non-interactively")
+    parser.add_argument("-e", "--export", help="Export output report to specified filename (CSV or JSON)")
+    
+    args, unknown = parser.parse_known_args()
+    
     df = pd.DataFrame()
     
+    # Check CLI non-interactive mode
+    if args.file:
+        df = load_data(args.file)
+        if args.analyze:
+            analyze_signal_strength(df)
+            analyze_network_types(df)
+            top_cells_by_signal(df)
+            plot_signal_distribution(df)
+            show_summary(df)
+        if args.export:
+            export_report(df, args.export)
+        if args.analyze or args.export:
+            return
+
     # Auto-load default dataset if present
     default_csv = os.path.join(DATA_DIR, 'call_data.csv')
-    if os.path.exists(default_csv):
+    if df.empty and os.path.exists(default_csv):
         print(f"[+] Auto-loading default dataset from {default_csv}...")
         df = load_data(default_csv)
     
@@ -419,22 +488,26 @@ def main():
             pause()
         elif choice == '4':
             print("\nSignal & Network Analysis Sub-menu:")
-            print("  1. Full Analysis Report")
+            print("  1. Full Analysis Report & Chart")
             print("  2. Identify Coverage Dead Zones (<= -110 dBm)")
             print("  3. Top Cell Towers")
-            sub_choice = input("Select option (1-3): ").strip()
+            print("  4. Signal Distribution Chart")
+            sub_choice = input("Select option (1-4): ").strip()
             if sub_choice == '2':
                 identify_dead_zones(df)
             elif sub_choice == '3':
                 top_cells_by_signal(df)
+            elif sub_choice == '4':
+                plot_signal_distribution(df)
             else:
                 analyze_signal_strength(df)
                 analyze_network_types(df)
                 top_cells_by_signal(df)
+                plot_signal_distribution(df)
                 show_summary(df)
             pause()
         elif choice == '5':
-            filename = input("Enter report filename (e.g. report.csv): ").strip()
+            filename = input("Enter report filename (e.g. report.csv or report.json): ").strip()
             if not filename:
                 filename = 'report.csv'
             export_report(df, filename)

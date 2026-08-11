@@ -14,11 +14,13 @@ A lightweight Python CLI utility for parsing, searching, and analyzing personal 
 - **Signal Quality Metrics & Ratings**:
   - Compute average, min, and max RSRP (Reference Signal Received Power in dBm) with human-readable quality ratings (`Excellent`, `Good`, `Fair`, `Poor`, `Very Poor`).
   - **Dead Zone Detection**: Automatically isolate and warn about poor coverage areas ($\le -110\text{ dBm}$).
+  - **Visual ASCII Signal Distribution**: Render terminal horizontal bar charts of signal quality breakdown.
   - Identify strongest and weakest connected Cell IDs (`CID`).
   - Analyze Radio Access Technology distribution (`LTE`, `5G NR`, `UMTS`).
   - Rank Top Cell Towers by average signal strength with performance ratings.
-- **Report Exporter**: Export filtered or analyzed telemetry into standard CSV reports.
-
+- **Non-Interactive CLI Flags**: Run automated batch analysis and report exports directly via command line arguments.
+- **Multi-Format Exporter**: Export filtered or analyzed telemetry into standard CSV or JSON reports.
+- **Unit Test Suite**: Built-in test coverage using Python `unittest`.
 
 ---
 
@@ -34,19 +36,6 @@ A lightweight Python CLI utility for parsing, searching, and analyzing personal 
 
 ---
 
-## 📋 Expected Dataset Schema
-
-Input CSV/JSON files should contain the following headers (column order is flexible):
-
-```csv
-timestamp,call_type,phone_number,duration,cell_id,lac,mcc,mnc,radio_type,signal_strength
-2026-08-11 10:15:30,INCOMING,+14155550123,120,CID_4011,102,410,01,LTE,-78
-2026-08-11 11:20:45,OUTGOING,+14155550199,45,CID_4011,102,410,01,LTE,-82
-2026-08-11 12:05:10,MISSED,+14155550177,0,CID_3092,105,410,01,5G NR,-105
-```
-
----
-
 ## 🚀 Quick Start
 
 ### 1. Installation
@@ -58,14 +47,30 @@ cd call-signal-tracker
 pip install pandas tabulate
 ```
 
-### 2. Usage
-Launch the interactive console:
+### 2. Interactive Usage
+Launch the interactive console menu:
 
 ```bash
 python call_signal_tracker.py
 ```
 
-The script will automatically attempt to load `data/call_data.csv` on startup if present. You can also import custom CSV or JSON logs directly through Option 1 in the main menu.
+### 3. Command Line (Batch / Scripting Mode)
+Run non-interactive analysis and export reports directly:
+
+```bash
+# Analyze a dataset directly
+python call_signal_tracker.py -f data/call_data.csv -a
+
+# Analyze and export report to JSON
+python call_signal_tracker.py -f data/call_data.csv -a -e reports/summary.json
+```
+
+### 4. Running Unit Tests
+Execute the unit test suite:
+
+```bash
+python -m unittest discover tests
+```
 
 ---
 
@@ -73,11 +78,13 @@ The script will automatically attempt to load `data/call_data.csv` on startup if
 
 ```text
 call-signal-tracker/
-├── call_signal_tracker.py   # Core CLI application
+├── call_signal_tracker.py   # Core CLI application & argparse engine
+├── tests/                   # Unit test suite
+│   └── test_tracker.py
 ├── data/                    # Sample datasets (CSV & JSON)
 │   ├── call_data.csv
 │   └── call_data.json
-├── reports/                 # Output folder for exported CSV reports
+├── reports/                 # Output folder for exported reports (CSV/JSON)
 ├── README.md                # Documentation
 └── .gitignore
 ```
