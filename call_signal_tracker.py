@@ -1,7 +1,7 @@
 """
 * CALL & SIGNAL TRACKER (Python) *
 Author: h4cker_fawad
-Version: 1.0
+Version: 1.1
 Description: Analyze your own call logs & mobile network signals.
 """
 
@@ -27,7 +27,7 @@ DATA_FILE = os.path.join(DATA_DIR, 'call_data.csv')
 
 # Program info
 APP_NAME = "CALL & SIGNAL TRACKER"
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 AUTHOR = "h4cker_fawad"
 DESCRIPTION = "Analyze your own call logs & mobile network signals."
 
@@ -49,10 +49,34 @@ def show_menu():
     print("6. Exit")
     print("-" * 60)
 
+def classify_rsrp(rsrp_val):
+    """
+    Classify RSRP signal strength (dBm) according to cellular standards:
+    >= -70 dBm    : Excellent
+    -70 to -90    : Good
+    -90 to -110   : Fair
+    -110 to -120  : Poor
+    <= -120 dBm   : Very Poor (Dead Zone)
+    """
+    try:
+        val = float(rsrp_val)
+        if val >= -70:
+            return "Excellent"
+        elif val >= -90:
+            return "Good"
+        elif val >= -110:
+            return "Fair"
+        elif val >= -120:
+            return "Poor"
+        else:
+            return "Very Poor (Dead Zone)"
+    except (ValueError, TypeError):
+        return "Unknown"
+
 def normalize_columns(df):
     """
     Standardize column names so both 'signal_strength' and 'rsrp' work seamlessly.
-    Also strips spaces and converts headers to lower-case.
+    Strips spaces and converts headers to lower-case.
     """
     if df.empty:
         return df
@@ -205,7 +229,7 @@ def filter_by_date(df):
 
 # --------- 4. ANALYZE SIGNAL STRENGTH & NETWORK DATA ---------
 def analyze_signal_strength(df):
-    """Perform analysis on signal strength (RSRP)."""
+    """Perform analysis on signal strength (RSRP) with ratings and dead zone counts."""
     if df.empty:
         print("[!] No data available to analyze.")
         return
@@ -229,13 +253,16 @@ def analyze_signal_strength(df):
     
     cell_col = 'cell_id' if 'cell_id' in valid_df.columns else valid_df.columns[0]
     
+    dead_zones = valid_df[valid_df['rsrp'] <= -110]
+    
     print("\n========== SIGNAL STRENGTH ANALYSIS ==========")
     print(f"Total records analyzed : {len(valid_df)}")
-    print(f"Average RSRP           : {avg_rsrp:.2f} dBm")
-    print(f"Strongest Signal       : {max_row['rsrp']} dBm")
+    print(f"Average RSRP           : {avg_rsrp:.2f} dBm ({classify_rsrp(avg_rsrp)})")
+    print(f"Strongest Signal       : {max_row['rsrp']} dBm ({classify_rsrp(max_row['rsrp'])})")
     print(f"  Cell ID              : {max_row.get(cell_col, 'N/A')}")
-    print(f"Weakest Signal         : {min_row['rsrp']} dBm")
+    print(f"Weakest Signal         : {min_row['rsrp']} dBm ({classify_rsrp(min_row['rsrp'])})")
     print(f"  Cell ID              : {min_row.get(cell_col, 'N/A')}")
+    print(f"Poor/Dead Zone Records : {len(dead_zones)} (RSRP <= -110 dBm)")
     print("==============================================")
     return valid_df
 
@@ -256,7 +283,7 @@ def analyze_network_types(df):
     return dist
 
 def top_cells_by_signal(df, top_n=5):
-    """List top N cell IDs by average signal strength."""
+    """List top N cell IDs by average signal strength with ratings."""
     if df.empty:
         print("[!] No data available to analyze.")
         return
@@ -275,9 +302,29 @@ def top_cells_by_signal(df, top_n=5):
     
     print(f"\n========== TOP {top_n} CELLS (by Avg RSRP) ==========")
     for cell_id, avg in top_cells.items():
-        print(f"Cell ID: {cell_id:<20} Avg RSRP: {avg:.2f} dBm")
+        rating = classify_rsrp(avg)
+        print(f"Cell ID: {cell_id:<20} Avg RSRP: {avg:.2f} dBm ({rating})")
     print("===================================================")
     return top_cells
+
+def identify_dead_zones(df, threshold=-110):
+    """Identify and display records with poor signal strength (<= threshold dBm)."""
+    if df.empty:
+        print("[!] No data available.")
+        return
+    if 'rsrp' not in df.columns:
+        print("[!] 'rsrp' / 'signal_strength' column missing.")
+        return
+        
+    valid_df = df.copy()
+    valid_df['rsrp'] = pd.to_numeric(valid_df['rsrp'], errors='coerce')
+    dead_zones = valid_df[valid_df['rsrp'] <= threshold]
+    
+    if dead_zones.empty:
+        print(f"[+] Good news! No records found with signal <= {threshold} dBm.")
+    else:
+        print(f"\n[!] WARNING: Found {len(dead_zones)} poor/dead zone records (<= {threshold} dBm):")
+        print_df_formatted(dead_zones)
 
 # --------- 5. EXPORT REPORT & MAIN PROGRAM LOOP ---------
 def export_report(df, filename='report.csv'):
@@ -294,7 +341,7 @@ def export_report(df, filename='report.csv'):
         print(f"[!] Error exporting report: {e}")
 
 def show_summary(df):
-    """Display overall summary statistics."""
+    """Display overall summary statistics with signal ratings."""
     if df.empty:
         print("[!] No data available.")
         return
@@ -321,9 +368,9 @@ def show_summary(df):
     
     print("\n========== DATA SUMMARY ==========")
     print(f"Total Records          : {total}")
-    print(f"Average RSRP (dBm)     : {avg_rsrp:.2f}")
-    print(f"Strongest Signal (dBm) : {strongest} (Cell ID: {strongest_cell})")
-    print(f"Weakest Signal (dBm)   : {weakest} (Cell ID: {weakest_cell})")
+    print(f"Average RSRP           : {avg_rsrp:.2f} dBm ({classify_rsrp(avg_rsrp)})")
+    print(f"Strongest Signal       : {strongest} dBm ({classify_rsrp(strongest)}) [Cell ID: {strongest_cell}]")
+    print(f"Weakest Signal         : {weakest} dBm ({classify_rsrp(weakest)}) [Cell ID: {weakest_cell}]")
     print("==================================\n")
 
 def pause():
@@ -371,10 +418,20 @@ def main():
                 view_all_records(df)
             pause()
         elif choice == '4':
-            analyze_signal_strength(df)
-            analyze_network_types(df)
-            top_cells_by_signal(df)
-            show_summary(df)
+            print("\nSignal & Network Analysis Sub-menu:")
+            print("  1. Full Analysis Report")
+            print("  2. Identify Coverage Dead Zones (<= -110 dBm)")
+            print("  3. Top Cell Towers")
+            sub_choice = input("Select option (1-3): ").strip()
+            if sub_choice == '2':
+                identify_dead_zones(df)
+            elif sub_choice == '3':
+                top_cells_by_signal(df)
+            else:
+                analyze_signal_strength(df)
+                analyze_network_types(df)
+                top_cells_by_signal(df)
+                show_summary(df)
             pause()
         elif choice == '5':
             filename = input("Enter report filename (e.g. report.csv): ").strip()

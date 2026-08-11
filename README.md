@@ -11,12 +11,14 @@ A lightweight Python CLI utility for parsing, searching, and analyzing personal 
 - **Multi-Format Data Loader**: Import call logs and network telemetry from `.csv` or `.json` files.
 - **Call Log Inspector**: Filter records by call status (`INCOMING`, `OUTGOING`, `MISSED`) or query by phone number substring.
 - **Timestamp Filter**: Slice data records between specific date/time ranges (`YYYY-MM-DD HH:MM:SS`).
-- **Signal Quality Metrics**:
-  - Compute average, min, and max RSRP (Reference Signal Received Power in dBm).
+- **Signal Quality Metrics & Ratings**:
+  - Compute average, min, and max RSRP (Reference Signal Received Power in dBm) with human-readable quality ratings (`Excellent`, `Good`, `Fair`, `Poor`, `Very Poor`).
+  - **Dead Zone Detection**: Automatically isolate and warn about poor coverage areas ($\le -110\text{ dBm}$).
   - Identify strongest and weakest connected Cell IDs (`CID`).
   - Analyze Radio Access Technology distribution (`LTE`, `5G NR`, `UMTS`).
-  - Rank Top Cell Towers by average signal strength.
+  - Rank Top Cell Towers by average signal strength with performance ratings.
 - **Report Exporter**: Export filtered or analyzed telemetry into standard CSV reports.
+
 
 ---
 
