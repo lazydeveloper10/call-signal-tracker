@@ -1,0 +1,19 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Generated reports & temporary files
+reports/*.csv
+!reports/.gitkeep
+test_export_report.csv
+
+# Environment & IDE
+.venv/
+env/
+venv/
+.idea/
+.vscode/
+.DS_Store
+*.webp
+
