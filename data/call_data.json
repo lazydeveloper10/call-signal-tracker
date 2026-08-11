@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2026-08-11 10:15:30",
+    "call_type": "INCOMING",
+    "phone_number": "+14155550123",
+    "duration": 120,
+    "cell_id": "CID_4011",
+    "lac": 102,
+    "mcc": 410,
+    "mnc": 1,
+    "radio_type": "LTE",
+    "signal_strength": -78
+  },
+  {
+    "timestamp": "2026-08-11 11:20:45",
+    "call_type": "OUTGOING",
+    "phone_number": "+14155550199",
+    "duration": 45,
+    "cell_id": "CID_4011",
+    "lac": 102,
+    "mcc": 410,
+    "mnc": 1,
+    "radio_type": "LTE",
+    "signal_strength": -82
+  },
+  {
+    "timestamp": "2026-08-11 12:05:10",
+    "call_type": "MISSED",
+    "phone_number": "+14155550177",
+    "duration": 0,
+    "cell_id": "CID_3092",
+    "lac": 105,
+    "mcc": 410,
+    "mnc": 1,
+    "radio_type": "5G NR",
+    "signal_strength": -105
+  }
+]
